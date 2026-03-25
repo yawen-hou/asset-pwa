@@ -84,7 +84,7 @@
   .amount-wrap { position:relative; }
   .amount-input {
     width:100%; background:var(--surface); border:1px solid var(--border); border-radius:12px;
-    color:var(--text); padding:14px 14px 14px 36px; font-size:22px; font-weight:500;
+    color:var(--text); padding:14px 14px 14px 52px; font-size:22px; font-weight:500;
     font-family:'DM Mono',monospace; outline:none; transition:border .2s;
   }
   .amount-input:focus { border-color:var(--accent); }
@@ -198,7 +198,7 @@
 // ── STATE ────────────────────────────────────────────────
 const ACCOUNT_COLORS = {
   '現金':'#6c8fff','台股':'#34d399','美股':'#f59e0b',
-  '房地產':'#a78bfa','定存':'#38bdf8','加密貨幣':'#fb923c',
+  '定存':'#38bdf8',
   '保險':'#f472b6','其他':'#94a3b8'
 };
 let accounts = JSON.parse(localStorage.getItem('assetAccounts') || 'null') || Object.keys(ACCOUNT_COLORS);
@@ -489,19 +489,6 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/sw.js').catch(()=>{});
 }
 
-// ── SEED DATA ────────────────────────────────────────────
-if(records.length===0){
-  const demo=[
-    {account:'現金',data:[[2024,10,180000],[2024,11,175000],[2024,12,190000],[2025,1,195000],[2025,2,188000],[2025,3,210000]]},
-    {account:'台股',data:[[2024,10,520000],[2024,11,560000],[2024,12,490000],[2025,1,610000],[2025,2,650000],[2025,3,680000]]},
-    {account:'美股',data:[[2024,10,320000],[2024,11,310000],[2024,12,350000],[2025,1,380000],[2025,2,410000],[2025,3,430000]]},
-    {account:'定存',data:[[2024,10,500000],[2024,11,500000],[2024,12,500000],[2025,1,600000],[2025,2,600000],[2025,3,600000]]},
-  ];
-  demo.forEach(({account,data})=>data.forEach(([year,month,amount])=>
-    records.push({year,month,account,amount,id:Date.now()+Math.random()})
-  ));
-  save();
-}
 
 render();
 </script>
