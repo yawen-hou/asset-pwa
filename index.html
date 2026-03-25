@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="資產管家">
+<meta name="theme-color" content="#0e0f13">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<title>資產管家</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --surface: #16181f;
+    --surface2: #1e2029;
+    --border: #2a2d3a;
+    --accent: #6c8fff;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --red: #f87171;
+    --text: #e8eaf0;
+    --text2: #8b90a7;
+    --text3: #555870;
+    --radius: 16px;
+    --card: #1a1c26;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; background:var(--bg); color:var(--text); font-family:'Noto Sans TC',sans-serif; font-size:15px; overflow:hidden; }
+
+  #app { display:flex; flex-direction:column; height:100vh; height:100dvh; max-width:430px; margin:0 auto; }
+
+  header {
+    padding-top: calc(var(--safe-top) + 16px);
+    padding-bottom: 12px; padding-left:20px; padding-right:20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .header-title { font-size:20px; font-weight:700; letter-spacing:-0.5px; }
+  .header-sub { font-size:11px; color:var(--text2); margin-top:2px; font-family:'DM Mono',monospace; }
+
+  .tabs {
+    display:flex; gap:6px; padding:10px 20px;
+    background: var(--bg); flex-shrink:0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex:1; padding:9px 4px; border-radius:10px; border:none; cursor:pointer;
+    font-family:'Noto Sans TC',sans-serif; font-size:13px; font-weight:500;
+    background:var(--surface); color:var(--text2); transition:all .2s;
+  }
+  .tab.active { background:var(--accent); color:#fff; }
+
+  .content { flex:1; overflow-y:auto; padding:0 20px; padding-bottom: calc(var(--safe-bottom) + 24px); }
+  .content::-webkit-scrollbar { display:none; }
+
+  .section-label { font-size:11px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin:18px 0 8px; font-family:'DM Mono',monospace; }
+
+  .date-row { display:flex; gap:8px; }
+  .select-box {
+    flex:1; background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    color:var(--text); padding:12px 14px; font-size:15px; font-family:'Noto Sans TC',sans-serif;
+    appearance:none; -webkit-appearance:none; outline:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b90a7' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center; padding-right:36px;
+  }
+  .select-box:focus { border-color:var(--accent); }
+
+  .account-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .account-chip {
+    padding:11px 14px; border-radius:12px; border:1.5px solid var(--border);
+    background:var(--surface); color:var(--text2); font-size:13px; cursor:pointer;
+    transition:all .18s; text-align:center; font-family:'Noto Sans TC',sans-serif;
+  }
+  .account-chip.selected { border-color:var(--accent); color:var(--accent); background:#6c8fff15; }
+  .account-chip .chip-dot { width:6px; height:6px; border-radius:50%; display:inline-block; margin-right:6px; }
+
+  .amount-wrap { position:relative; }
+  .amount-input {
+    width:100%; background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    color:var(--text); padding:14px 14px 14px 36px; font-size:22px; font-weight:500;
+    font-family:'DM Mono',monospace; outline:none; transition:border .2s;
+  }
+  .amount-input:focus { border-color:var(--accent); }
+  .amount-prefix { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text2); font-size:16px; }
+
+  .add-btn {
+    width:100%; margin-top:16px; padding:16px; border-radius:14px; border:none;
+    background:linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    color:#fff; font-size:16px; font-weight:600; cursor:pointer;
+    font-family:'Noto Sans TC',sans-serif; letter-spacing:0.5px;
+    transition:opacity .15s, transform .1s; box-shadow:0 4px 20px #6c8fff40;
+  }
+  .add-btn:active { opacity:.85; transform:scale(.98); }
+
+  .record-item {
+    display:flex; align-items:center; padding:12px 14px; background:var(--card);
+    border-radius:12px; margin-bottom:8px; border:1px solid var(--border);
+    animation:slideIn .2s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+  .record-dot { width:8px; height:8px; border-radius:50%; margin-right:12px; flex-shrink:0; }
+  .record-info { flex:1; }
+  .record-account { font-size:13px; color:var(--text2); }
+  .record-date { font-size:11px; color:var(--text3); margin-top:2px; font-family:'DM Mono',monospace; }
+  .record-amount { font-size:16px; font-weight:600; font-family:'DM Mono',monospace; }
+  .record-del { background:none; border:none; color:var(--text3); cursor:pointer; padding:4px 8px; font-size:18px; }
+
+  .filter-row { display:flex; gap:8px; margin-bottom:14px; }
+  .filter-row .select-box { font-size:13px; padding:10px 30px 10px 12px; }
+
+  .table-wrap { overflow-x:auto; border-radius:14px; border:1px solid var(--border); }
+  .asset-table { width:100%; border-collapse:collapse; font-size:12px; min-width:380px; }
+  .asset-table th {
+    background:var(--surface2); color:var(--text2); padding:10px; text-align:right;
+    font-weight:500; white-space:nowrap; border-bottom:1px solid var(--border);
+    font-family:'DM Mono',monospace; font-size:11px;
+  }
+  .asset-table th:first-child { text-align:left; position:sticky; left:0; background:var(--surface2); z-index:2; }
+  .asset-table td {
+    padding:9px 10px; text-align:right; border-bottom:1px solid #1e2029;
+    font-family:'DM Mono',monospace; white-space:nowrap;
+  }
+  .asset-table td:first-child { text-align:left; position:sticky; left:0; background:var(--card); color:var(--text2); font-size:11px; z-index:1; }
+  .asset-table tr:last-child td { border-bottom:none; }
+  .asset-table tr:hover td { background:var(--surface2); }
+  .asset-table tr:hover td:first-child { background:var(--surface2); }
+  .cell-empty { color:var(--text3); }
+
+  .growth-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .growth-card { background:var(--card); border-radius:14px; padding:14px; border:1px solid var(--border); }
+  .growth-label { font-size:10px; color:var(--text3); font-family:'DM Mono',monospace; margin-bottom:4px; }
+  .growth-account { font-size:12px; color:var(--text2); margin-bottom:8px; font-weight:500; }
+  .growth-value { font-size:18px; font-weight:700; font-family:'DM Mono',monospace; }
+  .up { color:var(--green); } .down { color:var(--red); } .neutral { color:var(--text2); }
+
+  .chart-card { background:var(--card); border-radius:16px; padding:16px; border:1px solid var(--border); margin-bottom:14px; }
+  .chart-card-title { font-size:11px; color:var(--text2); margin-bottom:14px; font-family:'DM Mono',monospace; letter-spacing:.5px; }
+
+  .summary-strip { display:flex; gap:8px; margin-bottom:14px; overflow-x:auto; }
+  .summary-strip::-webkit-scrollbar { display:none; }
+  .summary-chip { flex-shrink:0; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 14px; min-width:110px; }
+  .summary-chip .s-label { font-size:10px; color:var(--text3); font-family:'DM Mono',monospace; }
+  .summary-chip .s-val { font-size:15px; font-weight:700; font-family:'DM Mono',monospace; color:var(--text); margin-top:3px; }
+  .summary-chip .s-acc { font-size:11px; color:var(--text2); margin-top:2px; }
+
+  .new-account-row { display:flex; gap:8px; align-items:center; margin-top:8px; }
+  .text-input {
+    flex:1; background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    color:var(--text); padding:11px 14px; font-size:14px; font-family:'Noto Sans TC',sans-serif; outline:none;
+  }
+  .text-input:focus { border-color:var(--accent); }
+  .small-btn {
+    padding:11px 14px; border-radius:12px; border:1px solid var(--border); background:var(--surface);
+    color:var(--text2); font-size:13px; cursor:pointer; white-space:nowrap; font-family:'Noto Sans TC',sans-serif;
+  }
+
+  .toast {
+    position:fixed; bottom: calc(var(--safe-bottom) + 16px); left:50%; transform:translateX(-50%) translateY(20px);
+    background:#34d399; color:#0a1a12; padding:10px 20px; border-radius:10px;
+    font-size:13px; font-weight:600; opacity:0; transition:all .25s; pointer-events:none; z-index:999; white-space:nowrap;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* Install banner */
+  .install-banner {
+    margin: 12px 0 0; padding:12px 14px; background:var(--surface2); border-radius:12px;
+    border:1px solid var(--border); font-size:12px; color:var(--text2); line-height:1.6;
+    display:none;
+  }
+  .install-banner.visible { display:block; }
+  .install-banner strong { color:var(--text); }
+  .install-banner .close-banner { float:right; background:none; border:none; color:var(--text3); cursor:pointer; font-size:16px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-title">資產管家</div>
+    <div class="header-sub" id="header-sub">載入中…</div>
+  </header>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(0)">＋ 記帳</button>
+    <button class="tab" onclick="switchTab(1)">表格</button>
+    <button class="tab" onclick="switchTab(2)">趨勢圖</button>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────
+const ACCOUNT_COLORS = {
+  '現金':'#6c8fff','台股':'#34d399','美股':'#f59e0b',
+  '房地產':'#a78bfa','定存':'#38bdf8','加密貨幣':'#fb923c',
+  '保險':'#f472b6','其他':'#94a3b8'
+};
+let accounts = JSON.parse(localStorage.getItem('assetAccounts') || 'null') || Object.keys(ACCOUNT_COLORS);
+let records  = JSON.parse(localStorage.getItem('assetRecords')  || '[]');
+let currentTab = 0;
+const MONTHS = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+const now = new Date();
+
+function save() {
+  localStorage.setItem('assetRecords',  JSON.stringify(records));
+  localStorage.setItem('assetAccounts', JSON.stringify(accounts));
+}
+function color(a) { return ACCOUNT_COLORS[a] || '#8b90a7'; }
+function fmt(n) {
+  if (n==null||isNaN(n)) return '-';
+  return n>=10000 ? (n/10000).toFixed(1)+'萬' : n.toLocaleString();
+}
+function fmtFull(n) { return n==null?'-':Number(n).toLocaleString(); }
+
+// ── TABS ─────────────────────────────────────────────────
+function switchTab(i) {
+  currentTab=i;
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',i===j));
+  render();
+}
+
+// ── RENDER ───────────────────────────────────────────────
+function render() {
+  updateHeaderSub();
+  if (currentTab===0) renderInput();
+  else if (currentTab===1) renderTable();
+  else renderChart();
+}
+function updateHeaderSub() {
+  const total = records.reduce((s,r)=>s+r.amount,0);
+  document.getElementById('header-sub').textContent =
+    `${records.length} 筆記錄 · 合計 NT$${fmtFull(total)}`;
+}
+
+// ── TAB 0: INPUT ──────────────────────────────────────────
+let selectedAccount = null;
+function renderInput() {
+  const years=[];
+  for(let y=now.getFullYear()-3;y<=now.getFullYear()+1;y++) years.push(y);
+  document.getElementById('content').innerHTML = `
+    <div class="section-label">記錄時間</div>
+    <div class="date-row">
+      <select class="select-box" id="inp-year">
+        ${years.map(y=>`<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y} 年</option>`).join('')}
+      </select>
+      <select class="select-box" id="inp-month">
+        ${MONTHS.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="section-label">帳戶別</div>
+    <div class="account-grid" id="account-grid">
+      ${accounts.map(a=>`
+        <div class="account-chip ${selectedAccount===a?'selected':''}" onclick="selectAccount('${a}')" id="chip-${CSS.escape(a)}">
+          <span class="chip-dot" style="background:${color(a)}"></span>${a}
+        </div>`).join('')}
+    </div>
+    <div class="new-account-row">
+      <input class="text-input" id="new-acc-input" placeholder="新增帳戶…" />
+      <button class="small-btn" onclick="addAccount()">＋新增</button>
+    </div>
+
+    <div class="section-label">金額（台幣）</div>
+    <div class="amount-wrap">
+      <span class="amount-prefix">NT$</span>
+      <input class="amount-input" type="number" id="inp-amount" placeholder="0" inputmode="numeric"/>
+    </div>
+    <button class="add-btn" onclick="addRecord()">記錄資產</button>
+
+    <div class="section-label">本月記錄</div>
+    <div id="records-list"></div>
+  `;
+  renderRecordsList();
+}
+function selectAccount(a) {
+  selectedAccount=a;
+  document.querySelectorAll('.account-chip').forEach(c=>c.classList.remove('selected'));
+  const el=document.getElementById('chip-'+CSS.escape(a));
+  if(el) el.classList.add('selected');
+}
+function addAccount() {
+  const inp=document.getElementById('new-acc-input');
+  const name=inp.value.trim();
+  if(!name||accounts.includes(name)) return;
+  ACCOUNT_COLORS[name]=`hsl(${Math.floor(Math.random()*360)},60%,62%)`;
+  accounts.push(name); inp.value='';
+  save(); renderInput(); selectAccount(name);
+}
+function addRecord() {
+  const year=+document.getElementById('inp-year').value;
+  const month=+document.getElementById('inp-month').value;
+  const amount=+document.getElementById('inp-amount').value;
+  if(!selectedAccount){showToast('請選擇帳戶');return;}
+  if(!amount||amount<=0){showToast('請輸入金額');return;}
+  records.push({year,month,account:selectedAccount,amount,id:Date.now()});
+  save(); updateHeaderSub();
+  document.getElementById('inp-amount').value='';
+  showToast('✓ 已記錄');
+  renderRecordsList();
+}
+function deleteRecord(id) {
+  records=records.filter(r=>r.id!==id);
+  save(); updateHeaderSub(); renderRecordsList();
+}
+function renderRecordsList() {
+  const year=+document.getElementById('inp-year').value;
+  const month=+document.getElementById('inp-month').value;
+  const filtered=records.filter(r=>r.year===year&&r.month===month).sort((a,b)=>b.id-a.id);
+  const el=document.getElementById('records-list');
+  if(!el) return;
+  if(!filtered.length){el.innerHTML=`<div style="color:var(--text3);font-size:13px;padding:12px 0">本月尚無記錄</div>`;return;}
+  el.innerHTML=filtered.map(r=>`
+    <div class="record-item">
+      <div class="record-dot" style="background:${color(r.account)}"></div>
+      <div class="record-info">
+        <div class="record-account">${r.account}</div>
+        <div class="record-date">${r.year}/${String(r.month).padStart(2,'0')}</div>
+      </div>
+      <div class="record-amount" style="color:${color(r.account)}">NT$${fmtFull(r.amount)}</div>
+      <button class="record-del" onclick="deleteRecord(${r.id})">×</button>
+    </div>`).join('');
+}
+
+// ── PIVOT ────────────────────────────────────────────────
+function getPeriods(filterAcc) {
+  const accs=filterAcc==='all'?accounts.filter(a=>records.some(r=>r.account===a)):[filterAcc];
+  const periods=new Set();
+  records.forEach(r=>periods.add(`${r.year}-${String(r.month).padStart(2,'0')}`));
+  const sorted=[...periods].sort();
+  const pivot={};
+  sorted.forEach(p=>{pivot[p]={};accs.forEach(a=>pivot[p][a]=null);});
+  records.forEach(r=>{
+    const p=`${r.year}-${String(r.month).padStart(2,'0')}`;
+    if(!pivot[p]||!accs.includes(r.account)) return;
+    pivot[p][r.account]=(pivot[p][r.account]||0)+r.amount;
+  });
+  return{accs,periods:sorted,pivot};
+}
+
+// ── TAB 1: TABLE ─────────────────────────────────────────
+function renderTable() {
+  const usedAcc=accounts.filter(a=>records.some(r=>r.account===a));
+  document.getElementById('content').innerHTML=`
+    <div class="section-label" style="margin-top:16px">篩選</div>
+    <div class="filter-row">
+      <select class="select-box" id="tbl-acc" onchange="renderTableContent()">
+        <option value="all">全部帳戶</option>
+        ${usedAcc.map(a=>`<option value="${a}">${a}</option>`).join('')}
+      </select>
+      <select class="select-box" id="tbl-year" onchange="renderTableContent()">
+        <option value="all">所有年份</option>
+        ${[...new Set(records.map(r=>r.year))].sort().map(y=>`<option value="${y}">${y}年</option>`).join('')}
+      </select>
+    </div>
+    <div id="table-content"></div>
+    <div class="section-label" style="margin-top:20px">成長率分析</div>
+    <div id="growth-content"></div>
+  `;
+  renderTableContent();
+}
+function renderTableContent() {
+  const filterAcc=document.getElementById('tbl-acc').value;
+  const filterYear=document.getElementById('tbl-year').value;
+  const{accs,periods,pivot}=getPeriods(filterAcc);
+  const fp=filterYear==='all'?periods:periods.filter(p=>p.startsWith(filterYear));
+  if(!fp.length||!accs.length){
+    document.getElementById('table-content').innerHTML=`<div style="color:var(--text3);padding:20px 0;font-size:13px">尚無資料</div>`;
+    document.getElementById('growth-content').innerHTML=''; return;
+  }
+  document.getElementById('table-content').innerHTML=`
+    <div class="table-wrap">
+      <table class="asset-table">
+        <thead><tr>
+          <th>月份</th>
+          ${accs.map(a=>`<th><span style="color:${color(a)}">${a}</span></th>`).join('')}
+          ${accs.length>1?'<th>合計</th>':''}
+        </tr></thead>
+        <tbody>
+          ${fp.map(p=>{
+            const total=accs.reduce((s,a)=>s+(pivot[p][a]||0),0);
+            return`<tr>
+              <td>${p}</td>
+              ${accs.map(a=>`<td>${pivot[p][a]!=null?fmt(pivot[p][a]):'<span class="cell-empty">-</span>'}</td>`).join('')}
+              ${accs.length>1?`<td style="color:var(--accent);font-weight:600">${fmt(total)}</td>`:''}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  renderGrowth(accs,fp,pivot);
+}
+function renderGrowth(accs,periods,pivot) {
+  const last=periods[periods.length-1];
+  const prev=periods[periods.length-2]||null;
+  const[ly,lm]=last.split('-');
+  const yoyP=`${+ly-1}-${lm}`;
+  const cards=accs.map(a=>{
+    const cur=pivot[last]?.[a];
+    const mom=prev?pivot[prev]?.[a]:null;
+    const yoy=pivot[yoyP]?.[a];
+    const momPct=(cur!=null&&mom!=null&&mom!==0)?((cur-mom)/mom*100):null;
+    const yoyPct=(cur!=null&&yoy!=null&&yoy!==0)?((cur-yoy)/yoy*100):null;
+    return`<div class="growth-card">
+      <div class="growth-label">MOM / YOY</div>
+      <div class="growth-account"><span style="color:${color(a)};margin-right:5px">●</span>${a}</div>
+      <div style="display:flex;gap:16px">
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">月增率</div>
+          <div class="growth-value ${momPct==null?'neutral':momPct>=0?'up':'down'}">${momPct==null?'N/A':(momPct>=0?'+':'')+momPct.toFixed(1)+'%'}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">年增率</div>
+          <div class="growth-value ${yoyPct==null?'neutral':yoyPct>=0?'up':'down'}">${yoyPct==null?'N/A':(yoyPct>=0?'+':'')+yoyPct.toFixed(1)+'%'}</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:'DM Mono',monospace">${last} · NT$${fmtFull(cur)}</div>
+    </div>`;
+  });
+  document.getElementById('growth-content').innerHTML=`<div class="growth-grid">${cards.join('')}</div>`;
+}
+
+// ── TAB 2: CHART ─────────────────────────────────────────
+let chartInstances={};
+function destroyCharts(){Object.values(chartInstances).forEach(c=>c.destroy());chartInstances={};}
+function renderChart(){
+  destroyCharts();
+  const usedAcc=accounts.filter(a=>records.some(r=>r.account===a));
+  document.getElementById('content').innerHTML=`
+    <div class="section-label" style="margin-top:16px">篩選帳戶</div>
+    <div style="margin-bottom:12px">
+      <select class="select-box" id="ch-acc" onchange="renderChartContent()" style="width:100%">
+        <option value="all">全部帳戶</option>
+        ${usedAcc.map(a=>`<option value="${a}">${a}</option>`).join('')}
+      </select>
+    </div>
+    <div class="summary-strip" id="summary-strip"></div>
+    <div class="chart-card"><div class="chart-card-title">月份趨勢（折線圖）</div><canvas id="lineChart" height="200"></canvas></div>
+    <div class="chart-card"><div class="chart-card-title">資產組成（長條圖）</div><canvas id="barChart" height="200"></canvas></div>
+  `;
+  renderChartContent();
+}
+function renderChartContent(){
+  destroyCharts();
+  const filterAcc=document.getElementById('ch-acc').value;
+  const{accs,periods,pivot}=getPeriods(filterAcc);
+  if(!periods.length) return;
+  const lastP=periods[periods.length-1];
+  let summaryHtml='';
+  if(filterAcc==='all'&&accs.length>1){
+    const total=accs.reduce((s,a)=>s+(pivot[lastP][a]||0),0);
+    summaryHtml+=`<div class="summary-chip"><div class="s-label">合計 ${lastP}</div><div class="s-val" style="color:var(--accent)">${fmt(total)}</div><div class="s-acc">所有帳戶</div></div>`;
+  }
+  accs.forEach(a=>{
+    const v=pivot[lastP]?.[a]; if(v==null) return;
+    summaryHtml+=`<div class="summary-chip"><div class="s-label">${lastP}</div><div class="s-val">${fmt(v)}</div><div class="s-acc"><span style="color:${color(a)}">●</span> ${a}</div></div>`;
+  });
+  document.getElementById('summary-strip').innerHTML=summaryHtml;
+  const labels=periods.map(p=>{const[y,m]=p.split('-');return`${y.slice(2)}/${m}`;});
+  const cBase={responsive:true,maintainAspectRatio:true,
+    plugins:{legend:{labels:{color:'#8b90a7',font:{size:11},boxWidth:10}}},
+    scales:{x:{ticks:{color:'#555870',font:{size:10},maxRotation:45},grid:{color:'#1e2029'}},
+            y:{ticks:{color:'#555870',font:{size:10},callback:v=>fmt(v)},grid:{color:'#1e2029'}}}};
+  chartInstances.line=new Chart(document.getElementById('lineChart'),{
+    type:'line',
+    data:{labels,datasets:accs.map(a=>({label:a,data:periods.map(p=>pivot[p][a]),
+      borderColor:color(a),backgroundColor:color(a)+'33',pointBackgroundColor:color(a),
+      pointRadius:4,tension:0.35,fill:accs.length===1,spanGaps:true}))},
+    options:cBase
+  });
+  chartInstances.bar=new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{labels,datasets:accs.map(a=>({label:a,data:periods.map(p=>pivot[p][a]||0),
+      backgroundColor:color(a)+'bb',borderRadius:4}))},
+    options:cBase
+  });
+}
+
+// ── TOAST ────────────────────────────────────────────────
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+// ── SERVICE WORKER ───────────────────────────────────────
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
+// ── SEED DATA ────────────────────────────────────────────
+if(records.length===0){
+  const demo=[
+    {account:'現金',data:[[2024,10,180000],[2024,11,175000],[2024,12,190000],[2025,1,195000],[2025,2,188000],[2025,3,210000]]},
+    {account:'台股',data:[[2024,10,520000],[2024,11,560000],[2024,12,490000],[2025,1,610000],[2025,2,650000],[2025,3,680000]]},
+    {account:'美股',data:[[2024,10,320000],[2024,11,310000],[2024,12,350000],[2025,1,380000],[2025,2,410000],[2025,3,430000]]},
+    {account:'定存',data:[[2024,10,500000],[2024,11,500000],[2024,12,500000],[2025,1,600000],[2025,2,600000],[2025,3,600000]]},
+  ];
+  demo.forEach(({account,data})=>data.forEach(([year,month,amount])=>
+    records.push({year,month,account,amount,id:Date.now()+Math.random()})
+  ));
+  save();
+}
+
+render();
+</script>
+</body>
+</html>
