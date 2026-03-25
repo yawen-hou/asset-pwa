@@ -1,7 +1,7 @@
 {
-  "name": "資產管家",
-  "short_name": "資產管家",
-  "description": "個人資產記錄與分析工具",
+  "name": "MyAsset",
+  "short_name": "MyAsset",
+  "description": "MyAsset record",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0e0f13",
